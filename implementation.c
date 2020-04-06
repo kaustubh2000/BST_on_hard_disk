@@ -3,35 +3,19 @@
 #include "bst_structs.h"
 
 void delete (tree_t t, int key, FILE* fp, int pos, int pos2);
+void insert_node (tree_t t, node_t n, FILE* fp, int pos);
+void inorder (FILE* fp, int pos);
+void preorder (FILE* fp, int pos);
+void add (FILE* fp, int pos);
 int inorder_successor (FILE* fp, int pos, int pos2);
-void disp_freelist (FILE* fp);
 
-void disp_freelist (FILE* fp)
-{
-	tree_t t;
-	fseek (fp, 0, SEEK_SET);
-	fread (&t, sizeof(tree_t), 1, fp);
-	int val = t.free_head;
-	printf ("FREE LIST:\n");
-	while (val != -1)
-	{
-		printf ("%d -> ", val);
-		node_t temp;
-		fseek (fp, val, SEEK_SET);
-		fread (&temp, sizeof(node_t), 1, fp);
-		val = temp.left_offset;
-	}
-	printf ("%d\n", val);
-	fseek (fp, 0, SEEK_SET);
-}
-
+// Function to open the file in the desired mode
 FILE* init_tree (const char* filename)
 {
   FILE* fp;
 	fp = fopen (filename, "r+");
 	if(fp == NULL)
 	{
-		// printf("opening file failed for r+\n");
 		fp = fopen(filename, "w+");
 		if(fp == NULL)
 		{
@@ -48,19 +32,19 @@ FILE* init_tree (const char* filename)
 	return fp;
 }
 
+// function to close the file
 void close_tree (FILE *fp)
 {
   fclose (fp);
 }
 
+// function to insert a node into the BST
 void insert_node (tree_t t, node_t n, FILE* fp, int pos)
 {
-	// count++; if (count >= 10) return;
   node_t temp;
   fseek (fp, pos, SEEK_SET);
 	fread (&temp, sizeof(node_t), 1, fp);
-	// printf ("NEW -- Key: %d ; Left offset: %d ; Right offset: %d\n", n.key, n.left_offset, n.right_offset);
-  if (n.key < temp.key) {
+  if (n.key < temp.key) {   // going to the left sub tree
 
     if (temp.left_offset == -1) {
 
@@ -93,15 +77,13 @@ void insert_node (tree_t t, node_t n, FILE* fp, int pos)
 
 			}
     }
-    else {
-
+    else {   // recursive call to insert the node to the left sub tree
       fseek (fp, temp.left_offset, SEEK_SET);
       pos = ftell(fp);
       insert_node (t, n, fp, pos);
-
     }
   }
-  else if (n.key > temp.key) {
+  else if (n.key > temp.key) {  // goes to right sub tree
 
     if (temp.right_offset == -1) {
 
@@ -133,19 +115,18 @@ void insert_node (tree_t t, node_t n, FILE* fp, int pos)
 
 			}
 		}
-    else {
+    else {   // recursive call to insert the node to  the right sub tree
       fseek (fp, temp.right_offset, SEEK_SET);
       pos = ftell(fp);
-			// printf ("Key: %d ; Left offset: %d ; Right offset: %d\n", temp.key, temp.left_offset, temp.right_offset);
       insert_node (t, n, fp, pos);
     }
   }
-	else if (n.key == temp.key) {
-		printf ("Equal not allowed -- key -- %d\n", n.key);
+	else if (n.key == temp.key) {    // if there is already a node with the same value
 		return;
 	}
 }
 
+// function which calls insert_node
 void insert_key (int key, FILE *fp)
 {
   tree_t t;
@@ -156,12 +137,12 @@ void insert_key (int key, FILE *fp)
 
 	fseek (fp, 0, SEEK_SET);
   fread (&t, sizeof(tree_t), 1, fp);
-  if (t.root == -1) {
+  if (t.root == -1) {   // checling if tree is empty
 		if (t.free_head == -1){
 			t.root = ftell (fp);
 			fseek (fp, 0, SEEK_END);
 		}
-		else {
+		else {   // checking if there are any holes in the file
 			t.root = t.free_head;
 			fseek (fp, t.free_head, SEEK_SET);
 			node_t temp;
@@ -169,16 +150,17 @@ void insert_key (int key, FILE *fp)
 			fseek (fp, t.free_head, SEEK_SET);
 			t.free_head = temp.left_offset;
 		}
-			fwrite (&n, sizeof(node_t), 1, fp);
-			fseek (fp, 0, SEEK_SET);
-			fwrite (&t, sizeof(tree_t), 1, fp);
-			fseek (fp, 0, SEEK_SET);
-	    return;
+		fwrite (&n, sizeof(node_t), 1, fp);
+		fseek (fp, 0, SEEK_SET);
+		fwrite (&t, sizeof(tree_t), 1, fp);
+		fseek (fp, 0, SEEK_SET);
+	  return;
 	}
   insert_node (t, n, fp, t.root);
 	fseek (fp, 0, SEEK_SET);
 }
 
+// function called to display inorder form of the tree
 void inorder (FILE* fp, int pos)
 {
   if (pos != -1) {
@@ -186,59 +168,58 @@ void inorder (FILE* fp, int pos)
 		fseek (fp, pos, SEEK_SET);
 		fread (&temp, sizeof(node_t), 1, fp);
 		inorder (fp, temp.left_offset);
-		printf ("Key: %d ; Left offset: %d ; Right offset: %d Pos: %d\n", temp.key, temp.left_offset, temp.right_offset, pos);
-		// printf ("%d ", temp.key);
+		printf ("%d ", temp.key);
 		inorder (fp, temp.right_offset);
 	}
 }
 
+// recursively displaying inorder form of the BST
 void display_inorder (FILE* fp)
 {
   tree_t t;
   fread (&t, sizeof(tree_t), 1, fp);
-	// printf ("\nfree head is: %d\n", t.free_head);
   fseek (fp, t.root, SEEK_SET);
   inorder (fp, t.root);
 	fseek (fp, 0, SEEK_SET);
 	printf("\n");
 }
 
+// recursively displaying preorder form of the BST
 void preorder (FILE* fp, int pos)
 {
 	if (pos != -1) {
 		node_t temp;
 		fseek (fp, pos, SEEK_SET);
-		// printf ("curr pos: %d\n", pos);
 		fread (&temp, sizeof(node_t), 1, fp);
-		// printf ("Key: %d ; Left offset: %d ; Right offset: %d Pos: %d\n", temp.key, temp.left_offset, temp.right_offset, pos);
 		printf ("%d ", temp.key);
 		preorder (fp, temp.left_offset);
 		preorder (fp, temp.right_offset);
 	}
 }
 
+// function called to display preorder form of the tree
 void display_preorder (FILE* fp)
 {
   tree_t t;
   fread (&t, sizeof(tree_t), 1, fp);
   fseek (fp, t.root, SEEK_SET);
-	// printf ("\nfree head is: %d\n", t.free_head);
   preorder (fp, t.root);
 	fseek (fp, 0, SEEK_SET);
 	printf ("\n");
 }
 
+// function to add the offset into the linked list of free nodes
 void add (FILE* fp, int pos)
 {
 	tree_t t;
 	fseek (fp, 0, SEEK_SET);
 	fread (&t, sizeof(tree_t), 1, fp);
-	if (t.free_head == -1) {
+	if (t.free_head == -1) {   // if linked list is empty
 		t.free_head = pos;
 		node_t temp;
 		fseek (fp, pos, SEEK_SET);
 		fread (&temp, sizeof(node_t), 1, fp);
-		temp.left_offset = temp.right_offset = -1;
+		temp.left_offset = temp.right_offset = -1;  // using left offset to link
 		fseek (fp, pos, SEEK_SET);
 		fwrite (&temp, sizeof(node_t), 1, fp);
 		fseek (fp, 0, SEEK_SET);
@@ -264,6 +245,7 @@ void add (FILE* fp, int pos)
 	fseek (fp, 0, SEEK_SET);
 }
 
+// function called to delete a node
 void delete_key (int key, FILE* fp)
 {
 	tree_t t;
@@ -272,6 +254,7 @@ void delete_key (int key, FILE* fp)
 	fseek (fp, 0, SEEK_SET);
 }
 
+// recursive function to delete a node
 void delete (tree_t t, int key, FILE* fp, int pos, int pos2)
 {
 	if (pos != -1)
@@ -281,17 +264,17 @@ void delete (tree_t t, int key, FILE* fp, int pos, int pos2)
 		fseek (fp, pos, SEEK_SET);
 		fread (&temp, sizeof(node_t), 1, fp);
 
-		if (key < temp.key) {
+		if (key < temp.key) {   // recursively calling delete on left subtree
 			delete (t, key, fp, temp.left_offset, pos);
 		}
-		else if (key > temp.key) {
+		else if (key > temp.key) {   // recursively calling delete on right subtree
 			delete (t, key, fp, temp.right_offset, pos);
 		}
 		else if (key == temp.key)
 		{
-			if (pos2 == -1)
+			if (pos2 == -1)   // if node to be deleted is the root node
 			{
-				if (temp.right_offset == -1)
+				if (temp.right_offset == -1)  // no right subtree
 				{
 					add (fp, t.root);
 					fseek (fp, 0, SEEK_SET);
@@ -304,7 +287,7 @@ void delete (tree_t t, int key, FILE* fp, int pos, int pos2)
 				{
 					fseek (fp, temp.right_offset, SEEK_SET);
 					fread (&temp2, sizeof(node_t), 1, fp);
-					if (temp2.left_offset == -1)
+					if (temp2.left_offset == -1)    // no left subtree for the right side of the node
 					{
 						add (fp, temp.right_offset);
 						temp.key = temp2.key;
@@ -312,7 +295,7 @@ void delete (tree_t t, int key, FILE* fp, int pos, int pos2)
 						fseek (fp, pos, SEEK_SET);
 						fwrite (&temp, sizeof(node_t), 1, fp);
 					}
-					else
+					else    // if there is a left subtree to the right side, call the function inorder_successor
 					{
 						temp.key = inorder_successor (fp, temp.right_offset, -1);
 						fseek (fp, pos, SEEK_SET);
@@ -321,7 +304,7 @@ void delete (tree_t t, int key, FILE* fp, int pos, int pos2)
 				}
 				return;
 			}
-			fseek (fp, pos2, SEEK_SET);
+			fseek (fp, pos2, SEEK_SET);    // pos2 is the position of the previous node from the node to be deleted
 			fread (&temp2, sizeof(node_t), 1, fp);
 			if (temp.key < temp2.key) {
 
@@ -393,27 +376,26 @@ void delete (tree_t t, int key, FILE* fp, int pos, int pos2)
 		}
 		return;
 	}
-	printf ("Data not found.\n");
 	return;
 }
 
+// recursive function to get inorder successor
 int inorder_successor (FILE* fp, int pos, int pos2)
 {
 	node_t temp;
 	fseek (fp, pos, SEEK_SET);
 	fread (&temp, sizeof(node_t), 1, fp);
-	if (temp.left_offset != -1)
+	if (temp.left_offset != -1)  // as long as a left sub tree exists, call recursively
 	{
 		return inorder_successor (fp, temp.left_offset, pos);
 	}
 	add (fp, pos);
 	int key = temp.key;
 	node_t temp2;
-	fseek (fp, pos2, SEEK_SET);
+	fseek (fp, pos2, SEEK_SET);   // previous node to inorder successor
 	fread (&temp2, sizeof(node_t), 1, fp);
 	temp2.left_offset = temp.right_offset;
 	fseek (fp, pos2, SEEK_SET);
 	fwrite (&temp2, sizeof(node_t), 1, fp);
 	return key;
-
 }

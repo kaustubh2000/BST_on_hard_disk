@@ -14,7 +14,6 @@ int main()
   display_inorder (fp);
 //  disp_freelist (fp);
   delete_key (7, fp);
-  disp_freelist (fp);
   insert_key (13, fp);
 //  disp_freelist (fp);
   printf("\n");

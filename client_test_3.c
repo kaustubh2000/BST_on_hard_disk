@@ -13,19 +13,15 @@ int main()
 
   delete_key (6, fp);
   display_inorder (fp);
-  disp_freelist (fp);
 
   delete_key (7, fp);
   display_inorder (fp);
-  disp_freelist (fp);
 
   insert_key (9, fp);
   display_inorder (fp);
-  disp_freelist (fp);
 
   insert_key (0, fp);
   display_inorder (fp);
-  disp_freelist (fp);
 
   close_tree (fp);
 }
